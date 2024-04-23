@@ -46,7 +46,7 @@ def generate_P_from_N_p(N_p: list, all_nodes: list):
     unique_elements_all_nodes_and_depot.append(12)
     # start_customer represents u_p and end_customer represents v_p
     # Iterate over all possible nodes excluding of N_p for possible start_customers
-    for start_customer in unique_elements_all_nodes:
+    for start_customer in unique_elements_all_nodes_and_depot:
         # Iterate over all possible nodes and the depot excluding of N_p for possible start_customers
         for end_customer in unique_elements_all_nodes_and_depot:
             # u_p and v_p cannot be the same node
