@@ -6,12 +6,12 @@ P = []
 nearest_neighbors = []
 nodes = [i for i in range(12)]
 for time in nodes:
-    LA = [time]
+    LA = (time, [])
     for neighbor in range(1, int(amount_of_neighbors / 2) + 1):    
         positive_neighbor = ((time + neighbor) % 12)
         negative_neighbor = ((time - neighbor) % 12)
-        LA.append(positive_neighbor)
-        LA.append(negative_neighbor)
+        LA[1].append(positive_neighbor)
+        LA[1].append(negative_neighbor)
     nearest_neighbors.append(LA)
 
 
@@ -45,7 +45,7 @@ def generate_P_from_N_p(N_p: list, all_nodes: list):
     unique_elements_all_nodes_and_depot = unique_elements_all_nodes
     unique_elements_all_nodes_and_depot.append(12)
     # start_customer represents u_p and end_customer represents v_p
-    # Iterate over all possible nodes excluding of N_p for possible start_customers
+    # Iterate over all possible nodes and the depot excluding of N_p for possible start_customers
     for start_customer in unique_elements_all_nodes_and_depot:
         # Iterate over all possible nodes and the depot excluding of N_p for possible start_customers
         for end_customer in unique_elements_all_nodes_and_depot:
@@ -56,21 +56,41 @@ def generate_P_from_N_p(N_p: list, all_nodes: list):
                 P.append(p)
           
 
+def get_P_from_u_and_N_u(tuple_with_u_and_N_u, all_nodes):
+    
+    nodes_not_in_N_u_nor_u = [x for x in all_nodes if x not in tuple_with_u_and_N_u[1]]
+    nodes_not_in_N_u_nor_u.append(12)
+    nodes_not_in_N_u_nor_u.remove(tuple_with_u_and_N_u[0])
+    power_set_of_N_u = get_power_set(tuple_with_u_and_N_u[1])
+#    power_set_of_N_u.remove([])
+    for v_p in nodes_not_in_N_u_nor_u:
+        for subset in power_set_of_N_u:
+            P.append((tuple_with_u_and_N_u[0], v_p, subset))
+               
+
 # Generate the power set from each set of nearest neighbors (with one for each node)
 # N_p represents the set of neighborhoods
-N_p = []
-for base_set in nearest_neighbors:
-    power_set = get_power_set(base_set)
-    N_p.append(power_set)
+#N_p = []
+#for base_set in nearest_neighbors:
+#    power_set = get_power_set(base_set)
+#    N_p.append(power_set)
       
-N_p = get_unique_sets(N_p)
-print("N_p with unique sets: ")
-print(N_p)
-print("Amount of outer sets: ", len(N_p))
-print(nodes)
+#N_p = get_unique_sets(N_p)
+#print("N_p with unique sets: ")
+#print(N_p)
+#print("Amount of outer sets: ", len(N_p))
+#print(nodes)
 
-print("\n P: \n")
-for neighborhood in N_p:
-    generate_P_from_N_p(neighborhood, nodes)
+#print("\n P: \n")
+#for neighborhood in N_p:
+#    generate_P_from_N_p(neighborhood, nodes)
+#print(P)
+#print("Cardinality of P: ", len(P))
+
+print(nearest_neighbors)
+
+print("\nTest: \n")
+for time in nodes:
+    get_P_from_u_and_N_u(nearest_neighbors[time], nodes)
 print(P)
 print("Cardinality of P: ", len(P))
