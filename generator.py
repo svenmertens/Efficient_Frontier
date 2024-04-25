@@ -1,7 +1,13 @@
+from scipy.spatial.distance import pdist, squareform
+import pandas as pd
+
+
 # Setup config
 amount_of_neighbors = 4
 # List of LA-arcs P
 P = []
+R = []
+r_dict = {}
 # Set up LAs with nodes representing the numbers on a clock
 nearest_neighbors = []
 nodes = [i for i in range(12)]
@@ -13,6 +19,41 @@ for time in nodes:
         LA[1].append(positive_neighbor)
         LA[1].append(negative_neighbor)
     nearest_neighbors.append(LA)
+    
+
+clock_coordinates = [
+    (3, 6),
+    (4, 5),
+    (5, 4),
+    (6, 3),
+    (5, 2),
+    (4, 1),
+    (3, 0),
+    (2, 1),
+    (1, 2),
+    (0, 3),
+    (1, 4),
+    (2, 5),
+    (3, 3),
+    ]
+
+distances = pdist(clock_coordinates)
+distance_matrix = squareform(distances)
+distance_df = pd.DataFrame(distance_matrix, index=range(len(clock_coordinates)), columns=range(len(clock_coordinates)))
+
+
+def get_info(nodes):
+    key = tuple(sorted(nodes))
+    if key in r_dict:
+        return r_dict[key]
+    else:
+        return None
+
+    
+def add_route(nodes, cost, start_node, end_node, **kwargs):
+    # Convert the set of nodes to a tuple and add it to the dictionary for unique id
+    key = tuple(sorted(nodes))
+    r_dict[key] = {'cost': cost, 'start_node': start_node, 'end_node': end_node}
 
 
 # Function to get the power set of a given set. 
@@ -57,40 +98,44 @@ def generate_P_from_N_p(N_p: list, all_nodes: list):
           
 
 def get_P_from_u_and_N_u(tuple_with_u_and_N_u, all_nodes):
-    
+    # Possible v_p (end customer) nodes, cannot be equal to u or in N_u
     nodes_not_in_N_u_nor_u = [x for x in all_nodes if x not in tuple_with_u_and_N_u[1]]
+    # Add depot to possible v_p (end customers)
     nodes_not_in_N_u_nor_u.append(12)
+    # Remove u_p (start customer) from possible v_p
     nodes_not_in_N_u_nor_u.remove(tuple_with_u_and_N_u[0])
+    # Create power set of LA neighbors of u
     power_set_of_N_u = get_power_set(tuple_with_u_and_N_u[1])
-#    power_set_of_N_u.remove([])
+    #power_set_of_N_u.remove([])
+    # Generate each p in P by iterating through all possible v_p and LA neighbors
     for v_p in nodes_not_in_N_u_nor_u:
         for subset in power_set_of_N_u:
             P.append((tuple_with_u_and_N_u[0], v_p, subset))
+            
+    
+def get_efficient_frontier(p: tuple) -> tuple:
+    # Denoted as R_p^* in the literature
+    efficient_frontier = []
+    # neighbor denoted as w in literature, p[2] represents N_p
+    for neighbor in p[2]:
+        N_p_without_neighbor = p[2]
+        N_p_without_neighbor.remove(neighbor)
+        
+        p_hat = (neighbor, p[1], N_p_without_neighbor)
                
-
-# Generate the power set from each set of nearest neighbors (with one for each node)
-# N_p represents the set of neighborhoods
-#N_p = []
-#for base_set in nearest_neighbors:
-#    power_set = get_power_set(base_set)
-#    N_p.append(power_set)
-      
-#N_p = get_unique_sets(N_p)
-#print("N_p with unique sets: ")
-#print(N_p)
-#print("Amount of outer sets: ", len(N_p))
-#print(nodes)
-
-#print("\n P: \n")
-#for neighborhood in N_p:
-#    generate_P_from_N_p(neighborhood, nodes)
-#print(P)
-#print("Cardinality of P: ", len(P))
 
 print(nearest_neighbors)
 
-print("\nTest: \n")
+# Generate every p for each node u
 for time in nodes:
     get_P_from_u_and_N_u(nearest_neighbors[time], nodes)
+    
+# Sort P by the amount of neighbors
+P = sorted(P, key=lambda x: len(x[2]))
+
 print(P)
 print("Cardinality of P: ", len(P))
+
+print("Distance df: ", distance_df)
+
+print(distance_df[0][1])
