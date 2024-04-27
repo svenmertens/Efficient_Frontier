@@ -1,5 +1,6 @@
 from scipy.spatial.distance import pdist, squareform
 import pandas as pd
+import numpy as np
 
 
 # Setup config
@@ -108,9 +109,20 @@ def get_P_from_u_and_N_u(tuple_with_u_and_N_u, all_nodes):
     power_set_of_N_u = get_power_set(tuple_with_u_and_N_u[1])
     #power_set_of_N_u.remove([])
     # Generate each p in P by iterating through all possible v_p and LA neighbors
+#    for v_p in nodes:
+#        if tuple_with_u_and_N_u[0] != v_p:
+#            P.append((tuple_with_u_and_N_u[0], v_p, []))
+    for v_p in tuple_with_u_and_N_u[1]:
+        P.append((tuple_with_u_and_N_u[0], v_p, []))
+        # Increased 
+#        for neighbor_node in all_nodes: # tuple_with_u_and_N_u[1]
+#            if v_p != neighbor_node:
+#                P.append((tuple_with_u_and_N_u[0], v_p, [neighbor_node]))
     for v_p in nodes_not_in_N_u_nor_u:
-        for subset in power_set_of_N_u:
-            P.append((tuple_with_u_and_N_u[0], v_p, subset))
+        if v_p != tuple_with_u_and_N_u[0]:
+            for subset in power_set_of_N_u:
+#                if subset != []:
+                P.append((tuple_with_u_and_N_u[0], v_p, subset))
             
     
 def get_efficient_frontier(p: tuple) -> tuple:
@@ -122,9 +134,51 @@ def get_efficient_frontier(p: tuple) -> tuple:
         N_p_without_neighbor.remove(neighbor)
         
         p_hat = (neighbor, p[1], N_p_without_neighbor)
+        
+        
+def calculate_cost_for_p(p: tuple):
+    # If there are no intermediate customers, the cost of the edge from start customer to end customer is used
+    invalid_arc_count = 0
+    if len(p[2]) == 0:
+        cost = distance_df[p[0]][p[1]]
+        p_tuple = (p[0], p[1], tuple(p[2]))
+        r_dict[p_tuple] = cost
+    if len(p[2]) == 1:
+        # If there is one intermediate customer, the cost of the edges from start customer to the intermediate
+        # customer plus the from the intermediate customer to the end customer are used
+        cost = distance_df[p[0]][p[2][0]] + distance_df[p[1]][p[2][0]]
+        p_tuple = (p[0], p[1], tuple(p[2]))
+        r_dict[p_tuple] = cost
+    if len(p[2]) > 1:
+        # If there are multiple intermediate customers, the previously calculated paths are used to concatenate
+        # LA-arcs with the same end/start customer.
+        r_minus_dict = {}
+        for node in p[2]:
+            first_arc_cost   = distance_df[p[0]][node]
+            neighbors_without_new_start_node = p[2][:]
+            neighbors_without_new_start_node.remove(node)
+            try:
+                second_arc_cost = r_dict[node, p[1], tuple(neighbors_without_new_start_node)]
+            except KeyError:
+                try: 
+                    second_arc_cost = r_dict[p[1], node, tuple(neighbors_without_new_start_node)]
+                except KeyError:
+#                    break
+                    second_arc_cost = 100
+            cost = first_arc_cost + second_arc_cost
+            r_minus_dict[p[0], node, tuple(neighbors_without_new_start_node)] = cost
+        r_minus_series = pd.Series(r_minus_dict)
+        lowest_cost_in_r_minus_key = r_minus_series.idxmin()
+        lowest_cost_in_r_minus_cost = r_minus_series.min()
+        r_dict[lowest_cost_in_r_minus_key] = lowest_cost_in_r_minus_cost
+#        lowest_cost_r_minus = min(r_minus_dict, key=r_minus_dict.get)
+#        p_with_lowest_value = [key for key, value in r_minus_dict.items() if value == lowest_cost_r_minus]
+#        cost = r_dict[p_with_lowest_value]
+#        p_tuple = (p_with_lowest_value[0], p_with_lowest_value[1], tuple(p_with_lowest_value[2]))
+#        r_dict[p] = cost
                
 
-print(nearest_neighbors)
+print("Nearest Neighbors: ", nearest_neighbors)
 
 # Generate every p for each node u
 for time in nodes:
@@ -132,10 +186,25 @@ for time in nodes:
     
 # Sort P by the amount of neighbors
 P = sorted(P, key=lambda x: len(x[2]))
+print("P: ", P)
+print("Cardinality of P: ", len(P))
+# Sort neighbors (N_p) in P for saving and accessing in dict
+P = [(x[0], x[1], np.sort(x[2]).tolist()) for x in P]
 
-print(P)
+print("P: ", P)
 print("Cardinality of P: ", len(P))
 
-print("Distance df: ", distance_df)
+for p in P:
+    calculate_cost_for_p(p)
 
-print(distance_df[0][1])
+
+invalid_count = 0
+valid_count = 0
+for key, value in r_dict.items():
+    if value > 100:
+        invalid_count += 1
+    if value < 100:
+        valid_count += 1
+        
+print("Invalid count: ", invalid_count)
+print("Valid count: ", valid_count)
