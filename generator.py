@@ -9,6 +9,7 @@ amount_of_neighbors = 4
 P = []
 R = []
 r_dict = {}
+infinity = 1000000
 # Set up LAs with nodes representing the numbers on a clock
 nearest_neighbors = []
 nodes = [i for i in range(12)]
@@ -36,6 +37,22 @@ clock_coordinates = [
     (1, 4),
     (2, 5),
     (3, 3),
+    ]
+
+time_windows = [
+    (3, 6),
+    (4, 5),
+    (5, 4),
+    (6, 3),
+    (5, 2),
+    (4, 1),
+    (3, 0),
+    (2, 1),
+    (1, 2),
+    (0, 3),
+    (1, 4),
+    (2, 5),
+    (0, 10),
     ]
 
 distances = pdist(clock_coordinates)
@@ -79,25 +96,6 @@ def get_unique_sets(power_set):
     return unique_sets
 
 
-# Generate P by adding start and end customers (including depot)
-def generate_P_from_N_p(N_p: list, all_nodes: list):
-    # get elements from all_nodes that are not in N_p
-    unique_elements_all_nodes = [x for x in all_nodes if x not in N_p]
-    # Take node with index 12 as a depot
-    unique_elements_all_nodes_and_depot = unique_elements_all_nodes
-    unique_elements_all_nodes_and_depot.append(12)
-    # start_customer represents u_p and end_customer represents v_p
-    # Iterate over all possible nodes and the depot excluding of N_p for possible start_customers
-    for start_customer in unique_elements_all_nodes_and_depot:
-        # Iterate over all possible nodes and the depot excluding of N_p for possible start_customers
-        for end_customer in unique_elements_all_nodes_and_depot:
-            # u_p and v_p cannot be the same node
-            if start_customer != end_customer:
-                # Create LA-arc p by adding start and end customers for the set P
-                p = (start_customer, end_customer, N_p)
-                P.append(p)
-          
-
 def get_P_from_u_and_N_u(tuple_with_u_and_N_u, all_nodes):
     # Possible v_p (end customer) nodes, cannot be equal to u or in N_u
     nodes_not_in_N_u_nor_u = [x for x in all_nodes if x not in tuple_with_u_and_N_u[1]]
@@ -123,17 +121,6 @@ def get_P_from_u_and_N_u(tuple_with_u_and_N_u, all_nodes):
             for subset in power_set_of_N_u:
 #                if subset != []:
                 P.append((tuple_with_u_and_N_u[0], v_p, subset))
-            
-    
-def get_efficient_frontier(p: tuple) -> tuple:
-    # Denoted as R_p^* in the literature
-    efficient_frontier = []
-    # neighbor denoted as w in literature, p[2] represents N_p
-    for neighbor in p[2]:
-        N_p_without_neighbor = p[2]
-        N_p_without_neighbor.remove(neighbor)
-        
-        p_hat = (neighbor, p[1], N_p_without_neighbor)
         
         
 def calculate_cost_for_p(p: tuple):
@@ -160,22 +147,17 @@ def calculate_cost_for_p(p: tuple):
             try:
                 second_arc_cost = r_dict[node, p[1], tuple(neighbors_without_new_start_node)]
             except KeyError:
-                try: 
-                    second_arc_cost = r_dict[p[1], node, tuple(neighbors_without_new_start_node)]
-                except KeyError:
+#                try: 
+                second_arc_cost = r_dict[p[1], node, tuple(neighbors_without_new_start_node)]
+#                except KeyError:
 #                    break
-                    second_arc_cost = 100
+#                    second_arc_cost = infinity
             cost = first_arc_cost + second_arc_cost
             r_minus_dict[p[0], node, tuple(neighbors_without_new_start_node)] = cost
         r_minus_series = pd.Series(r_minus_dict)
         lowest_cost_in_r_minus_key = r_minus_series.idxmin()
         lowest_cost_in_r_minus_cost = r_minus_series.min()
         r_dict[lowest_cost_in_r_minus_key] = lowest_cost_in_r_minus_cost
-#        lowest_cost_r_minus = min(r_minus_dict, key=r_minus_dict.get)
-#        p_with_lowest_value = [key for key, value in r_minus_dict.items() if value == lowest_cost_r_minus]
-#        cost = r_dict[p_with_lowest_value]
-#        p_tuple = (p_with_lowest_value[0], p_with_lowest_value[1], tuple(p_with_lowest_value[2]))
-#        r_dict[p] = cost
                
 
 print("Nearest Neighbors: ", nearest_neighbors)
@@ -201,10 +183,10 @@ for p in P:
 invalid_count = 0
 valid_count = 0
 for key, value in r_dict.items():
-    if value > 100:
+    if value > 10000:
         invalid_count += 1
-    if value < 100:
+    if value < 10000:
         valid_count += 1
         
-print("Invalid count: ", invalid_count)
-print("Valid count: ", valid_count)
+#print("Invalid count: ", invalid_count)
+#print("Valid count: ", valid_count)
